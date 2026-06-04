@@ -2,9 +2,9 @@ module Territories
   class CaptureEngine
     def call(territory:, attacker:, movement_session:, batch_uuid:)
       return unless territory.pressure_score > territory.stability_score
-      return if territory.owner_user_id == attacker.id
+      return if territory.owner_id == attacker.id
 
-      previous_owner_id = territory.owner_user_id
+      previous_owner_id = territory.owner_id
       territory.update!(owner: attacker, last_capture_at: Time.current, version: territory.version + 1)
 
       Territories::EventAppender.new.call(

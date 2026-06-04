@@ -22,7 +22,7 @@ module Api
         {
           hex_id: territory.hex_id,
           resolution: territory.resolution,
-          owner_user_id: territory.owner_user_id,
+          owner_user_id: territory.owner_id,
           stability_score: territory.stability_score,
           pressure_score: territory.pressure_score,
           last_activity_at: territory.last_activity_at,
