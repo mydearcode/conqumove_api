@@ -8,6 +8,8 @@ class User < ApplicationRecord
   has_many :movement_sessions, dependent: :destroy
 
   normalizes :email, with: ->(email) { email.strip.downcase }
+  normalizes :city, with: ->(value) { value.to_s.strip.presence }
+  normalizes :region, with: ->(value) { value.to_s.strip.presence }
 
   validates :email, presence: true, uniqueness: true
 end

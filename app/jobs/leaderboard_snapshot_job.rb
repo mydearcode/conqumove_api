@@ -1,7 +1,7 @@
 class LeaderboardSnapshotJob < ApplicationJob
   queue_as :default
 
-  def perform(scope = "global")
-    Leaderboards::SnapshotBuilder.new.call(scope: scope)
+  def perform(scope = "global", scope_value = nil)
+    Leaderboards::SnapshotBuilder.new.call(scope: scope, scope_value: scope_value)
   end
 end

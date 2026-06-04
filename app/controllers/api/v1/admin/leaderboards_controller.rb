@@ -4,11 +4,13 @@ module Api
       class LeaderboardsController < BaseController
         def refresh
           scope = params.fetch(:scope, "global")
-          LeaderboardSnapshotJob.perform_later(scope)
+          scope_value = params[:scope_value].presence
+          LeaderboardSnapshotJob.perform_later(scope, scope_value)
 
           render json: {
             accepted: true,
-            scope: scope
+            scope: scope,
+            scope_value: scope_value
           }, status: :accepted
         end
 

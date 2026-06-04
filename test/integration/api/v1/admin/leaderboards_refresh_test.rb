@@ -14,7 +14,7 @@ class Api::V1::Admin::LeaderboardsRefreshTest < ActionDispatch::IntegrationTest
     token = Auth::TokenIssuer.new.call(user: admin).access_token
 
     assert_difference("AdminActionLog.count", 1) do
-      assert_enqueued_with(job: LeaderboardSnapshotJob, args: ["global"]) do
+      assert_enqueued_with(job: LeaderboardSnapshotJob, args: ["global", nil]) do
         post "/api/v1/admin/leaderboards/refresh",
              params: { scope: "global" },
              headers: auth_headers(token),
@@ -24,6 +24,25 @@ class Api::V1::Admin::LeaderboardsRefreshTest < ActionDispatch::IntegrationTest
 
     assert_response :accepted
     assert_equal "accepted", AdminActionLog.order(:created_at).last.status
+  end
+
+  test "enqueues location scoped leaderboard refresh" do
+    admin = User.create!(
+      email: "scope-admin@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      role: :admin
+    )
+    token = Auth::TokenIssuer.new.call(user: admin).access_token
+
+    assert_enqueued_with(job: LeaderboardSnapshotJob, args: ["city", "Istanbul"]) do
+      post "/api/v1/admin/leaderboards/refresh",
+           params: { scope: "city", scope_value: "Istanbul" },
+           headers: auth_headers(token),
+           as: :json
+    end
+
+    assert_response :accepted
   end
 
   private
