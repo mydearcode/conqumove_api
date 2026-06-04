@@ -44,4 +44,8 @@ class ApplicationController < ActionController::API
   def render_forbidden
     render json: { error: "Forbidden" }, status: :forbidden
   end
+
+  def render_too_many_requests(message = "Too Many Requests")
+    render json: { error: message }, status: :too_many_requests
+  end
 end

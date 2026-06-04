@@ -10,6 +10,12 @@ module Api
             territory_id: params[:territory_id].presence
           }, status: :accepted
         end
+
+        private
+
+        def admin_rate_limit
+          { limit: 3, period: 15.minutes }
+        end
       end
     end
   end

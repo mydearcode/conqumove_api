@@ -11,6 +11,12 @@ module Api
             scope: scope
           }, status: :accepted
         end
+
+        private
+
+        def admin_rate_limit
+          { limit: 10, period: 15.minutes }
+        end
       end
     end
   end

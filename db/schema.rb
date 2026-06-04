@@ -10,10 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_182000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_04_184500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
+
+  create_table "admin_action_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "action_name", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["status"], name: "index_admin_action_logs_on_status"
+    t.index ["user_id", "action_name", "occurred_at"], name: "idx_on_user_id_action_name_occurred_at_46a650887a"
+    t.index ["user_id"], name: "index_admin_action_logs_on_user_id"
+  end
 
   create_table "api_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -136,6 +149,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_182000) do
     t.index ["role"], name: "index_users_on_role"
   end
 
+  add_foreign_key "admin_action_logs", "users"
   add_foreign_key "api_tokens", "api_tokens", column: "replaced_by_id"
   add_foreign_key "api_tokens", "users"
   add_foreign_key "devices", "users"
