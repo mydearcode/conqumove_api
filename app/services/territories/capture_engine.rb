@@ -20,6 +20,8 @@ module Territories
           stability_score: territory.stability_score
         }
       )
+
+      BroadcastTerritoryUpdatesJob.perform_later(territory.id, "capture")
     end
   end
 end

@@ -32,6 +32,8 @@ module Territories
             }
           )
 
+          BroadcastTerritoryUpdatesJob.perform_later(territory.id, "influence_update")
+
           Territories::CaptureEngine.new.call(
             territory: territory,
             attacker: session.user,

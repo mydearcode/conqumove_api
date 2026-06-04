@@ -36,6 +36,8 @@ module Territories
             current_owner_id: territory.owner_id
           }
         )
+
+        BroadcastTerritoryUpdatesJob.perform_later(territory.id, "decay_tick")
       end
     end
 
