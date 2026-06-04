@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       namespace :admin do
         post "territories/rebuild", to: "territories#rebuild"
+        post "leaderboards/refresh", to: "leaderboards#refresh"
       end
 
       post "auth/register", to: "auth#register"
@@ -18,6 +19,7 @@ Rails.application.routes.draw do
       post "session/end", to: "sessions#finish"
       post "movement/batch", to: "movement_batches#create"
       get "territories/nearby", to: "territories#nearby"
+      get "leaderboards/:scope", to: "leaderboards#show"
     end
   end
 end
