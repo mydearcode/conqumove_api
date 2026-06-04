@@ -14,6 +14,10 @@ module Api
 
       private
 
+      def public_rate_limit_config
+        Rails.application.config.x.public_api_rate_limits.fetch(:territories).fetch(:nearby)
+      end
+
       def territory_payload(territory)
         {
           hex_id: territory.hex_id,

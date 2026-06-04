@@ -11,8 +11,8 @@ module Api
       end
 
       def login
-        user = User.find_by!(email: login_params[:email].to_s.strip.downcase)
-        raise ArgumentError, "Invalid email or password" unless user.authenticate(login_params[:password])
+        user = User.find_by(email: login_params[:email].to_s.strip.downcase)
+        return render_unauthorized("Invalid email or password", code: "invalid_credentials") unless user&.authenticate(login_params[:password])
 
         issued = Auth::TokenIssuer.new.call(user: user)
         render json: auth_payload(issued)
@@ -21,6 +21,8 @@ module Api
       def refresh
         issued = Auth::TokenRefresher.new.call(refresh_token: refresh_params[:refresh_token])
         render json: auth_payload(issued)
+      rescue ArgumentError
+        render_unauthorized("Invalid refresh token", code: "invalid_refresh_token")
       end
 
       def logout
@@ -36,6 +38,10 @@ module Api
       end
 
       private
+
+      def public_rate_limit_config
+        Rails.application.config.x.public_api_rate_limits.fetch(:auth).fetch(action_name.to_sym, nil)
+      end
 
       def registration_params
         params.permit(:email, :password, :password_confirmation)

@@ -7,10 +7,16 @@ module Api
             lat: params.require(:lat),
             lng: params.require(:lng),
             radius: params.fetch(:radius, 1),
-            cable_url: "#{request.base_url}/cable"
+            cable_url: public_cable_url
           )
 
           render json: contract
+        end
+
+        private
+
+        def public_rate_limit_config
+          Rails.application.config.x.public_api_rate_limits.fetch(:realtime_subscriptions).fetch(:nearby)
         end
       end
     end

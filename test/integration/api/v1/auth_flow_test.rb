@@ -19,6 +19,22 @@ class Api::V1::AuthFlowTest < ActionDispatch::IntegrationTest
     assert_equal "auth@example.com", body.dig("user", "email")
   end
 
+  test "returns invalid credentials as unauthorized with standard error payload" do
+    user = User.create!(
+      email: "bad-login@example.com",
+      password: "password123",
+      password_confirmation: "password123"
+    )
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: "wrong-password"
+    }, as: :json
+
+    assert_response :unauthorized
+    assert_equal "invalid_credentials", response.parsed_body.dig("error", "code")
+  end
+
   test "rotates refresh token" do
     user = User.create!(
       email: "refresh@example.com",
@@ -40,6 +56,15 @@ class Api::V1::AuthFlowTest < ActionDispatch::IntegrationTest
     assert_predicate issued.refresh_token_record.reload.revoked_at, :present?
   end
 
+  test "returns invalid refresh token as unauthorized with standard error payload" do
+    post "/api/v1/auth/refresh", params: {
+      refresh_token: "invalid-token"
+    }, as: :json
+
+    assert_response :unauthorized
+    assert_equal "invalid_refresh_token", response.parsed_body.dig("error", "code")
+  end
+
   test "requires authentication for protected endpoints" do
     post "/api/v1/session/start", params: {
       device_id: "ios-device",
@@ -48,5 +73,6 @@ class Api::V1::AuthFlowTest < ActionDispatch::IntegrationTest
     }, as: :json
 
     assert_response :unauthorized
+    assert_equal "unauthorized", response.parsed_body.dig("error", "code")
   end
 end

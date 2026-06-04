@@ -20,6 +20,10 @@ module Api
 
       private
 
+      def public_rate_limit_config
+        Rails.application.config.x.public_api_rate_limits.fetch(:movement_batches).fetch(:create)
+      end
+
       def batch_params
         params.permit(:session_id, :idempotency_key, points: [:lat, :lng, :timestamp, :speed, :accuracy, :source])
       end

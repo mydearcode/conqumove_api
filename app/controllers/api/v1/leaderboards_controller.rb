@@ -15,6 +15,12 @@ module Api
           created_at: snapshot.created_at
         }
       end
+
+      private
+
+      def public_rate_limit_config
+        Rails.application.config.x.public_api_rate_limits.fetch(:leaderboards).fetch(:show)
+      end
     end
   end
 end

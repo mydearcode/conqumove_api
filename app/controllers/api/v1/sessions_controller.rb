@@ -24,6 +24,10 @@ module Api
 
       private
 
+      def public_rate_limit_config
+        Rails.application.config.x.public_api_rate_limits.fetch(:sessions).fetch(action_name.to_sym, nil)
+      end
+
       def start_params
         params.permit(:device_id, :activity_type, :platform)
       end
