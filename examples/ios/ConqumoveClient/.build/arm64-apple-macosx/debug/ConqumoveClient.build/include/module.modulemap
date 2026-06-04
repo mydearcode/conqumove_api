@@ -1,0 +1,3 @@
+module ConqumoveClient {
+    header "/Users/mihrac/procekt/conqurun/examples/ios/ConqumoveClient/.build/arm64-apple-macosx/debug/ConqumoveClient.build/include/ConqumoveClient-Swift.h"
+}
