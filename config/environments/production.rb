@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require "uri"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -13,6 +14,7 @@ Rails.application.configure do
   config.consider_all_requests_local = false
 
   # Cache assets for far-future expiry since they are all digest stamped.
+  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present? || ENV["RENDER"].present?
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
@@ -55,7 +57,19 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  public_base_url = Rails.configuration.x.public_base_url.presence
+  if public_base_url
+    public_base_uri = URI.parse(public_base_url)
+    config.action_mailer.default_url_options = {
+      host: public_base_uri.host,
+      protocol: public_base_uri.scheme
+    }
+    config.action_cable.allowed_request_origins = [ public_base_url ]
+  else
+    config.action_mailer.default_url_options = { host: "example.com" }
+  end
+
+  config.action_cable.url = Rails.configuration.x.public_cable_url.presence || public_base_url&.then { "#{_1}/cable" }
   config.action_cable.disable_request_forgery_protection = true
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.

@@ -1,0 +1,55 @@
+CONQUMOVE RENDER DEPLOY NOTES
+
+This repo includes a Render Blueprint at:
+- render.yaml
+
+Recommended Render setup:
+- 1 web service
+- 1 PostgreSQL database
+- single database reused for primary, cache, queue, and cable connections
+
+Important environment variables:
+- RAILS_MASTER_KEY
+- CONQUMOVE_PUBLIC_BASE_URL
+- CONQUMOVE_PUBLIC_CABLE_URL
+
+Recommended values:
+- CONQUMOVE_PUBLIC_BASE_URL=https://your-render-service.onrender.com
+- CONQUMOVE_PUBLIC_CABLE_URL=wss://your-render-service.onrender.com/cable
+
+Blueprint behavior:
+- build command: ./bin/render-build.sh
+- pre-deploy command: bundle exec rails db:prepare
+- start command: bundle exec puma -C config/puma.rb
+- Solid Queue runs inside Puma via SOLID_QUEUE_IN_PUMA=true
+
+What db:prepare covers:
+- primary schema
+- cache schema
+- queue schema
+- cable schema
+
+Manual first deploy checklist:
+1. Push repo to GitHub
+2. Create new Blueprint service in Render
+3. Point it to this repository
+4. Set RAILS_MASTER_KEY
+5. Set CONQUMOVE_PUBLIC_BASE_URL
+6. Set CONQUMOVE_PUBLIC_CABLE_URL
+7. Deploy
+8. Verify /up returns 200
+9. Verify /api-docs loads
+
+Optional first-run seed:
+- After the first successful deploy, run:
+  bundle exec rails db:seed
+
+Useful production checks:
+- GET /up
+- GET /api-docs/openapi.yaml
+- GET /api/v1/realtime/subscriptions/nearby with a valid bearer token
+
+Notes:
+- Swagger UI is served from public/swagger, so RAILS_SERVE_STATIC_FILES must stay enabled.
+- Render injects DATABASE_URL automatically from the linked Postgres instance.
+- This setup keeps production simple by using one Postgres instance for Rails, cache, queue, and cable.
