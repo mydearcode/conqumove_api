@@ -31,5 +31,9 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# Ignore Swift Package build artifacts from example clients.
+.build/
+.swiftpm/
+
 # Ignore markdown planning and notes files in this workspace.
 *.md
