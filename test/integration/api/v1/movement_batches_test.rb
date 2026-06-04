@@ -10,6 +10,7 @@ class Api::V1::MovementBatchesTest < ActionDispatch::IntegrationTest
       password: "password123",
       password_confirmation: "password123"
     )
+    @token = ApiToken.issue_for(user: @user).last
     @device = @user.devices.create!(device_identifier: "ios-sim-2", platform: "ios")
     @session = @user.movement_sessions.create!(
       device: @device,
@@ -29,7 +30,7 @@ class Api::V1::MovementBatchesTest < ActionDispatch::IntegrationTest
           { lat: 41.01, lng: 29.02, timestamp: Time.current.iso8601, speed: 5.1, accuracy: 8.0 },
           { lat: 41.011, lng: 29.021, timestamp: 5.seconds.from_now.iso8601, speed: 5.4, accuracy: 7.5 }
         ]
-      }, as: :json
+      }, headers: auth_headers(@token), as: :json
     end
 
     assert_response :accepted
@@ -44,10 +45,16 @@ class Api::V1::MovementBatchesTest < ActionDispatch::IntegrationTest
         points: [
           { lat: 41.01, lng: 29.02, timestamp: Time.current.iso8601, speed: 5.1, accuracy: 8.0 }
         ]
-      }, as: :json
+      }, headers: auth_headers(@token), as: :json
     end
 
     assert_response :ok
     assert_equal 1, @session.gps_points.count
+  end
+
+  private
+
+  def auth_headers(token)
+    { "Authorization" => "Bearer #{token}" }
   end
 end

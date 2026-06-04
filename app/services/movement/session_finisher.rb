@@ -1,7 +1,6 @@
 module Movement
   class SessionFinisher
-    def call(session_id:, summary: {})
-      session = MovementSession.find(session_id)
+    def call(session:, summary: {})
       summary = summary.to_h.symbolize_keys
 
       session.update!(

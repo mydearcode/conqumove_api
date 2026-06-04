@@ -2,7 +2,7 @@ module Api
   module V1
     class MovementBatchesController < ApplicationController
       def create
-        session = MovementSession.find(batch_params[:session_id])
+        session = current_user.movement_sessions.find(batch_params[:session_id])
         points = normalized_points
         result = Movement::BatchIngestor.new.call(
           session: session,

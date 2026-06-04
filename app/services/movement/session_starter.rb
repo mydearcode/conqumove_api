@@ -1,7 +1,6 @@
 module Movement
   class SessionStarter
-    def call(user_id:, device_id:, activity_type:, platform: "ios")
-      user = User.find(user_id)
+    def call(user:, device_id:, activity_type:, platform: "ios")
       device = user.devices.find_or_initialize_by(device_identifier: device_id)
       device.platform = platform.presence || device.platform || "ios"
       device.last_seen_at = Time.current

@@ -3,7 +3,7 @@ module Api
     class SessionsController < ApplicationController
       def start
         session = Movement::SessionStarter.new.call(
-          user_id: start_params[:user_id],
+          user: current_user,
           device_id: start_params[:device_id],
           activity_type: start_params[:activity_type],
           platform: start_params[:platform]
@@ -13,8 +13,9 @@ module Api
       end
 
       def finish
+        session = current_user.movement_sessions.find(finish_params[:session_id])
         session = Movement::SessionFinisher.new.call(
-          session_id: finish_params[:session_id],
+          session: session,
           summary: finish_params[:summary] || {}
         )
 
@@ -24,7 +25,7 @@ module Api
       private
 
       def start_params
-        params.permit(:user_id, :device_id, :activity_type, :platform)
+        params.permit(:device_id, :activity_type, :platform)
       end
 
       def finish_params
