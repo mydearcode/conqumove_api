@@ -1,0 +1,52 @@
+CONQUMOVE iOS DEMO SEED SETUP
+
+This document describes the demo data prepared by db/seeds.rb for local iOS integration.
+
+1. Seed command
+
+Development:
+bin/rails db:seed
+
+Test / CI style verification:
+RAILS_ENV=test bin/rails db:seed
+
+2. Seeded demo users
+
+Player 1:
+- email: demo@conqumove.local
+- password: password123
+- city: Istanbul
+- region: Marmara
+
+Player 2:
+- email: rival@conqumove.local
+- password: password123
+- city: Istanbul
+- region: Marmara
+
+Admin:
+- email: admin@conqumove.local
+- password: password123
+- role: admin
+
+3. Seeded gameplay state
+
+- A small set of territories around central Istanbul is created.
+- Some territories are owned by the demo user.
+- Some territories are owned by the rival user.
+- One territory is left neutral.
+- Capture and influence events are written so replay / rebuild logic has demo history.
+- Leaderboard snapshots for global, user, city=Istanbul and region=Marmara are generated.
+
+4. Recommended local iOS flow
+
+- Login with demo@conqumove.local / password123
+- Use lat=41.015 and lng=28.979 for nearby territory and subscription requests
+- Open nearby contract endpoint and connect to returned cable_url
+- Start a walking session, send movement batches, then end the session
+
+5. Notes
+
+- Seeds are written to be idempotent.
+- Existing demo users are updated in place instead of duplicated.
+- Leaderboard snapshots are regenerated on each seed run so local demo state stays fresh.

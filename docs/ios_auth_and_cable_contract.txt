@@ -1,6 +1,22 @@
-CONQUMOVE iOS AUTH + CABLE CONTRACT
+CONQUMOVE iOS AUTH + MOVEMENT + CABLE CONTRACT
 
-1. Register
+1. Environment configuration
+
+Development defaults:
+- base_url: http://localhost:3000
+- cable_url: http://localhost:3000/cable
+
+Staging / production:
+- Set CONQUMOVE_PUBLIC_BASE_URL to the externally reachable API base URL.
+- Set CONQUMOVE_PUBLIC_CABLE_URL if cable must use a different public URL than <base_url>/cable.
+- If CONQUMOVE_PUBLIC_CABLE_URL is not set, the API returns <public_base_url>/cable.
+
+Recommended iOS environments:
+- Debug -> local API
+- Staging -> shared staging API
+- Release -> production API
+
+2. Register
 POST /api/v1/auth/register
 {
   "email": "runner@example.com",
@@ -20,11 +36,11 @@ Response:
   "refresh_token_expires_at": "timestamp"
 }
 
-2. Login
+3. Login
 POST /api/v1/auth/login
 Body matches register without password_confirmation.
 
-3. Refresh
+4. Refresh
 POST /api/v1/auth/refresh
 {
   "refresh_token": "opaque-refresh-token"
@@ -32,11 +48,103 @@ POST /api/v1/auth/refresh
 
 Refresh rotates the previous refresh token and returns a new access + refresh pair.
 
-4. Authenticated API calls
+5. Authenticated API calls
 Use header:
 Authorization: Bearer <access_token>
 
-5. Nearby realtime subscription contract
+6. Standard error response
+
+All 401 / 403 / 422 / 429 responses use the same envelope:
+{
+  "error": {
+    "code": "machine_readable_code",
+    "message": "Human readable message",
+    "details": { }
+  },
+  "request_id": "request-id"
+}
+
+Examples:
+- 401 missing or expired access token -> code: unauthorized
+- 401 login failure -> code: invalid_credentials
+- 401 refresh failure -> code: invalid_refresh_token
+- 403 admin-only endpoint -> code: forbidden
+- 422 validation or missing params -> code: validation_error or unprocessable_entity
+- 429 rate limiting -> code: rate_limited
+
+429 responses also include:
+- Retry-After header with seconds
+
+7. Movement session start
+POST /api/v1/session/start
+Authorization: Bearer <access_token>
+{
+  "device_id": "ios-device-1",
+  "activity_type": "walking",
+  "platform": "ios"
+}
+
+Response:
+{
+  "id": "session-uuid",
+  "user_id": "user-uuid",
+  "device_id": "ios-device-1",
+  "activity_type": "walking",
+  "status": "active",
+  "started_at": "timestamp",
+  "ended_at": null,
+  "total_distance_m": 0.0,
+  "total_duration_sec": 0,
+  "avg_speed_kmh": 0.0,
+  "trust_score": 100
+}
+
+8. Movement batch ingestion
+POST /api/v1/movement/batch
+Authorization: Bearer <access_token>
+{
+  "session_id": "session-uuid",
+  "idempotency_key": "uuid-or-client-batch-id",
+  "points": [
+    {
+      "lat": 41.015,
+      "lng": 28.979,
+      "timestamp": "2026-06-04T12:00:00Z",
+      "speed": 5.2,
+      "accuracy": 8.0,
+      "source": "ios"
+    }
+  ]
+}
+
+Rules:
+- timestamp must be ISO8601 UTC string
+- idempotency_key must be unique per session and stable for retries
+- retrying with the same session_id + idempotency_key + identical payload is safe
+- retrying the same idempotency_key with a different payload is rejected
+- source should remain "ios" unless another explicit mobile source is introduced
+
+Response:
+{
+  "session_id": "session-uuid",
+  "batch_uuid": "uuid-or-client-batch-id",
+  "accepted": true,
+  "points_received": 1
+}
+
+9. Session end
+POST /api/v1/session/end
+Authorization: Bearer <access_token>
+{
+  "session_id": "session-uuid",
+  "summary": {
+    "distance_m": 1200.0,
+    "duration_sec": 900,
+    "avg_speed_kmh": 4.8
+  }
+}
+
+10. Nearby realtime subscription contract
 GET /api/v1/realtime/subscriptions/nearby?lat=41.01&lng=29.02&radius=1
 
 Response:
@@ -60,14 +168,14 @@ Response:
   }
 }
 
-6. Cable connection
+11. Cable connection
 Preferred:
 wss://api.example.com/cable?token=<access_token>
 
 Alternative if the client supports headers:
 Authorization: Bearer <access_token>
 
-7. Subscription examples
+12. Subscription examples
 {
   "command": "subscribe",
   "identifier": "{\"channel\":\"TerritoryUpdatesChannel\",\"hex_ids\":[\"8928308280fffff\"]}"
@@ -78,7 +186,22 @@ Authorization: Bearer <access_token>
   "identifier": "{\"channel\":\"CaptureEventsChannel\",\"hex_ids\":[\"8928308280fffff\"]}"
 }
 
-8. Broadcast payloads
+13. Cable lifecycle expectations
+
+iOS client should follow this sequence:
+- Connect using current access token
+- Subscribe to nearby channels returned by /realtime/subscriptions/nearby
+- If HTTP requests start returning 401, refresh token pair first
+- After a successful refresh, reconnect cable with the new access token
+- Re-fetch nearby contract if the user location scope changed materially
+- On reconnect, resubscribe using the latest known hex_ids
+
+Backend expectations:
+- access token can be passed via cable query param token
+- expired / invalid cable token should be treated as unauthorized connection
+- refresh does not hot-swap an existing cable socket; client should reconnect explicitly
+
+14. Broadcast payloads
 Territory diff:
 {
   "type": "influence_update | decay_tick | capture",
