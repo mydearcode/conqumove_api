@@ -10,7 +10,7 @@ module ApplicationCable
 
     def find_verified_user
       token = request.params[:token].presence || bearer_token
-      api_token = ApiToken.authenticate(token)
+      api_token = ApiToken.authenticate(token, token_kind: :access)
       reject_unauthorized_connection unless api_token
 
       api_token.user

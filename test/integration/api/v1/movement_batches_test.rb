@@ -10,7 +10,7 @@ class Api::V1::MovementBatchesTest < ActionDispatch::IntegrationTest
       password: "password123",
       password_confirmation: "password123"
     )
-    @token = ApiToken.issue_for(user: @user).last
+    @token = Auth::TokenIssuer.new.call(user: @user).access_token
     @device = @user.devices.create!(device_identifier: "ios-sim-2", platform: "ios")
     @session = @user.movement_sessions.create!(
       device: @device,

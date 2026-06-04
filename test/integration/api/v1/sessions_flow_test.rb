@@ -7,7 +7,7 @@ class Api::V1::SessionsFlowTest < ActionDispatch::IntegrationTest
       password: "password123",
       password_confirmation: "password123"
     )
-    @token = ApiToken.issue_for(user: @user).last
+    @token = Auth::TokenIssuer.new.call(user: @user).access_token
   end
 
   test "starts a movement session" do

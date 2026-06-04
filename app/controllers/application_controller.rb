@@ -13,7 +13,7 @@ class ApplicationController < ActionController::API
     token = bearer_token
     return render_unauthorized if token.blank?
 
-    api_token = ApiToken.authenticate(token)
+    api_token = ApiToken.authenticate(token, token_kind: :access)
     return render_unauthorized unless api_token
 
     api_token.touch(:last_used_at)
