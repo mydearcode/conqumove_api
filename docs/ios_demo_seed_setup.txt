@@ -2,6 +2,11 @@ CONQUMOVE iOS DEMO SEED SETUP
 
 This document describes the demo data prepared by db/seeds.rb for local iOS integration.
 
+IMPORTANT:
+- Demo users do not exist until you run the seed command in the same environment the API server uses.
+- If your Rails server runs in development, run `bin/rails db:seed`.
+- If you seeded only test, the iOS app will still get "invalid credentials" against development.
+
 1. Seed command
 
 Development:

@@ -52,6 +52,10 @@ Demo local credentials:
 - rival@conqumove.local / password123
 - admin@conqumove.local / password123
 
+Before trying these credentials:
+- run `bin/rails db:seed` in the backend repo
+- make sure the iOS app is pointing to the same running backend environment
+
 Demo nearby coordinates:
 - lat=41.015
 - lng=28.979
