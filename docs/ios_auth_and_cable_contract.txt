@@ -1,0 +1,106 @@
+CONQUMOVE iOS AUTH + CABLE CONTRACT
+
+1. Register
+POST /api/v1/auth/register
+{
+  "email": "runner@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+Response:
+{
+  "user": {
+    "id": "uuid",
+    "email": "runner@example.com"
+  },
+  "access_token": "opaque-token",
+  "access_token_expires_at": "timestamp",
+  "refresh_token": "opaque-token",
+  "refresh_token_expires_at": "timestamp"
+}
+
+2. Login
+POST /api/v1/auth/login
+Body matches register without password_confirmation.
+
+3. Refresh
+POST /api/v1/auth/refresh
+{
+  "refresh_token": "opaque-refresh-token"
+}
+
+Refresh rotates the previous refresh token and returns a new access + refresh pair.
+
+4. Authenticated API calls
+Use header:
+Authorization: Bearer <access_token>
+
+5. Nearby realtime subscription contract
+GET /api/v1/realtime/subscriptions/nearby?lat=41.01&lng=29.02&radius=1
+
+Response:
+{
+  "cable_url": "https://api.example.com/cable",
+  "hex_ids": ["8928308280fffff"],
+  "channels": {
+    "territory_updates": {
+      "channel": "TerritoryUpdatesChannel",
+      "params": { "hex_ids": [...] }
+    },
+    "capture_events": {
+      "channel": "CaptureEventsChannel",
+      "params": { "hex_ids": [...] }
+    }
+  },
+  "authorization": {
+    "type": "bearer_or_query_token",
+    "access_token_param": "token",
+    "access_token_header": "Authorization: Bearer <access_token>"
+  }
+}
+
+6. Cable connection
+Preferred:
+wss://api.example.com/cable?token=<access_token>
+
+Alternative if the client supports headers:
+Authorization: Bearer <access_token>
+
+7. Subscription examples
+{
+  "command": "subscribe",
+  "identifier": "{\"channel\":\"TerritoryUpdatesChannel\",\"hex_ids\":[\"8928308280fffff\"]}"
+}
+
+{
+  "command": "subscribe",
+  "identifier": "{\"channel\":\"CaptureEventsChannel\",\"hex_ids\":[\"8928308280fffff\"]}"
+}
+
+8. Broadcast payloads
+Territory diff:
+{
+  "type": "influence_update | decay_tick | capture",
+  "hex_id": "8928308280fffff",
+  "resolution": 9,
+  "owner_user_id": "uuid or null",
+  "stability_score": 10.2,
+  "pressure_score": 4.6,
+  "version": 3,
+  "last_activity_at": "timestamp or null",
+  "last_capture_at": "timestamp or null"
+}
+
+Capture event channel payload:
+{
+  "type": "territory_captured",
+  "hex_id": "8928308280fffff",
+  "resolution": 9,
+  "owner_user_id": "uuid",
+  "stability_score": 3.0,
+  "pressure_score": 5.0,
+  "version": 8,
+  "last_activity_at": "timestamp",
+  "last_capture_at": "timestamp"
+}

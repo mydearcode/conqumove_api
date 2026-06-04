@@ -9,6 +9,10 @@ Rails.application.routes.draw do
         post "leaderboards/refresh", to: "leaderboards#refresh"
       end
 
+      namespace :realtime do
+        get "subscriptions/nearby", to: "subscriptions#nearby"
+      end
+
       post "auth/register", to: "auth#register"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
