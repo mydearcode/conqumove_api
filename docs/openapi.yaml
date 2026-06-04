@@ -1,0 +1,796 @@
+openapi: 3.1.0
+info:
+  title: Conqumove API
+  version: 0.1.0
+  description: >
+    OpenAPI specification for the Conqumove MVP backend. The backend is the
+    authoritative game-state engine; mobile clients submit movement data and
+    consume derived territory, leaderboard, and realtime subscription contracts.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://staging.example.com
+    description: Example staging placeholder
+tags:
+  - name: Auth
+  - name: Sessions
+  - name: Movement
+  - name: Territories
+  - name: Leaderboards
+  - name: Realtime
+  - name: Admin
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: registerUser
+      summary: Register a new player account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created and token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: loginUser
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+              examples:
+                invalidCredentials:
+                  value:
+                    error:
+                      code: invalid_credentials
+                      message: Invalid email or password
+                      details:
+                    request_id: req_123
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Rotate the refresh token and issue a new token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token pair rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+              examples:
+                invalidRefreshToken:
+                  value:
+                    error:
+                      code: invalid_refresh_token
+                      message: Invalid refresh token
+                      details:
+                    request_id: req_123
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/logout:
+    delete:
+      tags: [Auth]
+      operationId: logoutUser
+      summary: Revoke the current access token
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      operationId: currentUser
+      summary: Return the current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/session/start:
+    post:
+      tags: [Sessions]
+      operationId: startSession
+      summary: Start a movement session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionStartRequest'
+      responses:
+        '201':
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/session/end:
+    post:
+      tags: [Sessions]
+      operationId: finishSession
+      summary: Finish a movement session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionFinishRequest'
+      responses:
+        '200':
+          description: Session finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/movement/batch:
+    post:
+      tags: [Movement]
+      operationId: createMovementBatch
+      summary: Submit a movement batch for ingestion
+      description: >
+        idempotency_key must be stable per session retry. Identical retries are
+        safe; different payloads under the same key are rejected.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovementBatchRequest'
+      responses:
+        '202':
+          description: Batch accepted and analysis enqueued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementBatchResponse'
+        '200':
+          description: Duplicate batch ignored safely
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementBatchResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/territories/nearby:
+    get:
+      tags: [Territories]
+      operationId: nearbyTerritories
+      summary: Fetch nearby derived territories
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Lat'
+        - $ref: '#/components/parameters/Lng'
+        - $ref: '#/components/parameters/Radius'
+        - name: resolution
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 9
+      responses:
+        '200':
+          description: Nearby territory read model
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Territory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/leaderboards/{scope}:
+    get:
+      tags: [Leaderboards]
+      operationId: showLeaderboard
+      summary: Return the latest leaderboard snapshot for a scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [global, user, city, region]
+        - name: scope_value
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Required for city and region scopes
+      responses:
+        '200':
+          description: Latest leaderboard snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/realtime/subscriptions/nearby:
+    get:
+      tags: [Realtime]
+      operationId: nearbyRealtimeContract
+      summary: Return nearby hex subscription contract for Action Cable
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Lat'
+        - $ref: '#/components/parameters/Lng'
+        - $ref: '#/components/parameters/Radius'
+      responses:
+        '200':
+          description: Realtime subscription contract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbySubscriptionContract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/admin/territories/rebuild:
+    post:
+      tags: [Admin]
+      operationId: rebuildTerritories
+      summary: Enqueue replay/rebuild for territories
+      description: Admin role required
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                territory_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '202':
+          description: Rebuild accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/admin/leaderboards/refresh:
+    post:
+      tags: [Admin]
+      operationId: refreshLeaderboards
+      summary: Enqueue leaderboard snapshot refresh
+      description: Admin role required
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                  enum: [global, user, city, region]
+                  default: global
+                scope_value:
+                  type: string
+                  nullable: true
+      responses:
+        '202':
+          description: Refresh accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLeaderboardRefreshAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque access token
+  parameters:
+    Lat:
+      name: lat
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+    Lng:
+      name: lng
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+    Radius:
+      name: radius
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+  responses:
+    Unauthorized:
+      description: Missing, expired, or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+          examples:
+            unauthorized:
+              value:
+                error:
+                  code: unauthorized
+                  message: Unauthorized
+                  details:
+                request_id: req_123
+    Forbidden:
+      description: Authenticated but not authorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+          examples:
+            forbidden:
+              value:
+                error:
+                  code: forbidden
+                  message: Forbidden
+                  details:
+                request_id: req_123
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: not_found
+                  message: Resource not found
+                  details:
+                request_id: req_123
+    UnprocessableEntity:
+      description: Validation failure or missing parameter
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+    RateLimited:
+      description: Public or admin rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until retry is allowed
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+          examples:
+            rateLimited:
+              value:
+                error:
+                  code: rate_limited
+                  message: Rate limit exceeded
+                  details:
+                    scope: api/v1/movement_batches#create
+                    retry_after: 60
+                request_id: req_123
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, password_confirmation]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        password_confirmation:
+          type: string
+          minLength: 8
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+    UserSummary:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - access_token
+        - access_token_expires_at
+        - refresh_token
+        - refresh_token_expires_at
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        access_token:
+          type: string
+        access_token_expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+        refresh_token_expires_at:
+          type: string
+          format: date-time
+    SessionStartRequest:
+      type: object
+      required: [device_id, activity_type, platform]
+      properties:
+        device_id:
+          type: string
+        activity_type:
+          type: string
+          enum: [walking, running]
+        platform:
+          type: string
+          enum: [ios, android]
+    SessionFinishRequest:
+      type: object
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        summary:
+          type: object
+          properties:
+            distance_m:
+              type: number
+              format: double
+            duration_sec:
+              type: integer
+            avg_speed_kmh:
+              type: number
+              format: double
+    MovementSession:
+      type: object
+      required:
+        - id
+        - user_id
+        - device_id
+        - activity_type
+        - status
+        - started_at
+        - total_distance_m
+        - total_duration_sec
+        - avg_speed_kmh
+        - trust_score
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+        activity_type:
+          type: string
+          enum: [walking, running]
+        status:
+          type: string
+          enum: [active, paused, ended, invalid]
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_distance_m:
+          type: number
+          format: double
+        total_duration_sec:
+          type: integer
+        avg_speed_kmh:
+          type: number
+          format: double
+        trust_score:
+          type: integer
+    MovementPoint:
+      type: object
+      required: [lat, lng, timestamp]
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        speed:
+          type: number
+          format: double
+        accuracy:
+          type: number
+          format: double
+        source:
+          type: string
+          default: ios
+    MovementBatchRequest:
+      type: object
+      required: [session_id, idempotency_key, points]
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        idempotency_key:
+          type: string
+        points:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/MovementPoint'
+    MovementBatchResponse:
+      type: object
+      required: [session_id, batch_uuid, accepted, points_received]
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        batch_uuid:
+          type: string
+        accepted:
+          type: boolean
+        points_received:
+          type: integer
+    Territory:
+      type: object
+      required:
+        - hex_id
+        - resolution
+        - stability_score
+        - pressure_score
+        - version
+      properties:
+        hex_id:
+          type: string
+        resolution:
+          type: integer
+        owner_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        stability_score:
+          type: number
+          format: double
+        pressure_score:
+          type: number
+          format: double
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+    LeaderboardSnapshot:
+      type: object
+      required: [scope, data, created_at]
+      properties:
+        scope:
+          type: string
+          enum: [global, user, city, region]
+        scope_value:
+          type: string
+          nullable: true
+        data:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    CableChannelDescriptor:
+      type: object
+      required: [channel, params]
+      properties:
+        channel:
+          type: string
+        params:
+          type: object
+          required: [hex_ids]
+          properties:
+            hex_ids:
+              type: array
+              items:
+                type: string
+    NearbySubscriptionContract:
+      type: object
+      required: [cable_url, hex_ids, channels, authorization]
+      properties:
+        cable_url:
+          type: string
+          format: uri
+        hex_ids:
+          type: array
+          items:
+            type: string
+        channels:
+          type: object
+          required: [territory_updates, capture_events]
+          properties:
+            territory_updates:
+              $ref: '#/components/schemas/CableChannelDescriptor'
+            capture_events:
+              $ref: '#/components/schemas/CableChannelDescriptor'
+        authorization:
+          type: object
+          required: [type, access_token_param, access_token_header]
+          properties:
+            type:
+              type: string
+            access_token_param:
+              type: string
+            access_token_header:
+              type: string
+    AdminAccepted:
+      type: object
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+        territory_id:
+          type: string
+          format: uuid
+          nullable: true
+    AdminLeaderboardRefreshAccepted:
+      type: object
+      required: [accepted, scope]
+      properties:
+        accepted:
+          type: boolean
+        scope:
+          type: string
+          enum: [global, user, city, region]
+        scope_value:
+          type: string
+          nullable: true
+    ApiErrorEnvelope:
+      type: object
+      required: [error, request_id]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+        request_id:
+          type: string
