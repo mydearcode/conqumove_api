@@ -4,35 +4,48 @@ require "active_job/test_helper"
 class Api::V1::Admin::TerritoriesRebuildTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
-  test "enqueues rebuild when admin token is valid" do
-    with_admin_token("secret-token") do
-      assert_enqueued_with(job: RebuildTerritoriesJob, args: [nil]) do
-        post "/api/v1/admin/territories/rebuild",
-             headers: { "X-Admin-Token" => "secret-token" },
-             as: :json
-      end
+  test "enqueues rebuild for admin user" do
+    admin = User.create!(
+      email: "admin@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      role: :admin
+    )
+    token = Auth::TokenIssuer.new.call(user: admin).access_token
 
-      assert_response :accepted
+    assert_enqueued_with(job: RebuildTerritoriesJob, args: [nil]) do
+      post "/api/v1/admin/territories/rebuild",
+           headers: auth_headers(token),
+           as: :json
     end
+
+    assert_response :accepted
   end
 
-  test "rejects invalid admin token" do
-    with_admin_token("secret-token") do
-      post "/api/v1/admin/territories/rebuild",
-           headers: { "X-Admin-Token" => "wrong-token" },
-           as: :json
+  test "rejects non-admin user" do
+    player = User.create!(
+      email: "player@example.com",
+      password: "password123",
+      password_confirmation: "password123"
+    )
+    token = Auth::TokenIssuer.new.call(user: player).access_token
 
-      assert_response :unauthorized
-    end
+    post "/api/v1/admin/territories/rebuild",
+         headers: auth_headers(token),
+         as: :json
+
+    assert_response :forbidden
+  end
+
+  test "rejects unauthenticated request" do
+    post "/api/v1/admin/territories/rebuild", as: :json
+
+    assert_response :unauthorized
   end
 
   private
 
-  def with_admin_token(token)
-    previous = ENV["CONQURUN_ADMIN_TOKEN"]
-    ENV["CONQURUN_ADMIN_TOKEN"] = token
-    yield
-  ensure
-    ENV["CONQURUN_ADMIN_TOKEN"] = previous
+  def auth_headers(token)
+    { "Authorization" => "Bearer #{token}" }
   end
 end
