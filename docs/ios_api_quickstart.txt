@@ -1,0 +1,68 @@
+CONQUMOVE IOS API QUICKSTART
+
+Backend repo:
+- /Users/mihrac/procekt/conqurun
+
+Primary API docs:
+- docs/ios_auth_and_cable_contract.txt
+- docs/openapi.yaml
+- docs/openapi_usage.txt
+
+Base local URLs:
+- API base_url: http://localhost:3000
+- Swagger docs: http://localhost:3000/api-docs
+- OpenAPI raw spec: http://localhost:3000/api-docs/openapi.yaml
+
+Auth endpoints:
+- POST /api/v1/auth/register
+- POST /api/v1/auth/login
+- POST /api/v1/auth/refresh
+- DELETE /api/v1/auth/logout
+- GET /api/v1/auth/me
+
+Movement endpoints:
+- POST /api/v1/session/start
+- POST /api/v1/movement/batch
+- POST /api/v1/session/end
+
+Read model endpoints:
+- GET /api/v1/territories/nearby
+- GET /api/v1/leaderboards/:scope
+- GET /api/v1/realtime/subscriptions/nearby
+
+Required client behavior:
+- Use Bearer access token for authenticated HTTP requests
+- On 401, call /api/v1/auth/refresh and retry the failed request
+- Reconnect Action Cable with the new access token after refresh
+- Use stable idempotency_key values for movement batch retries
+- Send timestamps as ISO8601 UTC strings
+
+Standard error format:
+{
+  "error": {
+    "code": "machine_readable_code",
+    "message": "Human readable message",
+    "details": {}
+  },
+  "request_id": "request-id"
+}
+
+Demo local credentials:
+- demo@conqumove.local / password123
+- rival@conqumove.local / password123
+- admin@conqumove.local / password123
+
+Demo nearby coordinates:
+- lat=41.015
+- lng=28.979
+
+Suggested first iOS integration order:
+1. login
+2. session store
+3. refresh flow
+4. fetch nearby subscription contract
+5. connect cable
+6. subscribe to returned channels
+7. start session
+8. send movement batches
+9. end session

@@ -1,0 +1,38 @@
+CONQUMOVE OPENAPI USAGE
+
+This project keeps the source of truth OpenAPI file at:
+- docs/openapi.yaml
+
+Local viewing options:
+
+1. Raw spec endpoint
+- Start Rails server
+- Open: http://localhost:3000/api-docs/openapi.yaml
+
+2. Swagger UI
+- Start Rails server
+- Open: http://localhost:3000/api-docs
+- This redirects to the static Swagger UI page at /swagger/index.html
+- The page loads the live spec from /api-docs/openapi.yaml
+
+Typical local flow:
+1. bin/rails server
+2. Open http://localhost:3000/api-docs
+3. Authorize with a Bearer access token when testing secured endpoints
+
+How to regenerate or update:
+- Edit docs/openapi.yaml directly
+- Keep request/response schemas aligned with controllers and docs/ios_auth_and_cable_contract.txt
+- After changes, verify parsing with:
+  ruby -e 'require "yaml"; YAML.load_file("docs/openapi.yaml"); puts "ok"'
+
+Recommended maintenance rule:
+- Any public request/response contract change should update:
+  - docs/openapi.yaml
+  - docs/ios_auth_and_cable_contract.txt
+  - relevant tests if behavior changed
+
+Notes:
+- This setup is intentionally lightweight and adds no Swagger gem dependency.
+- Swagger UI assets are loaded from a CDN.
+- If internet-free local viewing is needed later, the Swagger UI assets can be vendored into public/.

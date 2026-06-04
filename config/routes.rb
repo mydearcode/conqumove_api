@@ -1,5 +1,7 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  get "api-docs", to: redirect("/swagger/index.html")
+  get "api-docs/openapi.yaml", to: "api_docs#openapi"
   mount ActionCable.server => "/cable"
 
   namespace :api do
